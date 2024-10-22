@@ -1,0 +1,40 @@
+#!/usr/bin/expect
+
+# Wait for MySQL to be ready
+set timeout 30
+spawn bash -c "until mysql -h xdmod_db -u root -ppassword -e 'SELECT 1'; do {puts \"Waiting for MySQL...\"; sleep 3;}"
+wait
+
+# Start the XDMoD setup
+spawn xdmod-setup
+
+# Interact with the setup
+expect "Select an option (1, 2, 3, 4, 5, 6, 7, 8, q):"
+send "2\r"
+
+expect "DB Name:"
+send "xdmod_db\r"
+
+expect "DB Port:"
+send "3306\r"
+
+expect "DB Username:"
+send "xdmod_user\r"
+
+expect "DB Password:"
+send "xdmod_pass\r"
+
+expect "confirm) DB Password:"
+send "xdmod_pass\r"
+
+expect "DB Admin Username:"
+send "root\r"
+
+expect "DB Admin Password:"
+send "password\r"
+
+expect "confirm) DB Admin Password:"
+send "password\r"
+
+# Wait for the setup to finish
+expect eof

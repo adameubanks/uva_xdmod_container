@@ -1,14 +1,39 @@
 FROM php:7.4-apache
 
-# Install system dependencies, including expect
+# Install dependencies and add Sury repository for PHP extensions
 RUN apt-get update && apt-get install -y \
+    lsb-release \
+    apt-transport-https \
+    ca-certificates \
+    wget \
+    gnupg \
+    && wget -qO - https://packages.sury.org/php/apt.gpg | apt-key add - \
+    && echo "deb https://packages.sury.org/php/ $(lsb_release -sc) main" | tee /etc/apt/sources.list.d/sury-php.list \
+    && apt-get update && apt-get install -y \
     libzip-dev \
     unzip \
-    wget \
     tar \
     default-mysql-client \
     expect \
-    && docker-php-ext-install zip pdo_mysql mysqli
+    chromium \
+    sendmail \
+    nodejs npm \
+    libcurl4-openssl-dev \
+    libicu-dev \
+    libonig-dev # Add this line to install Oniguruma
+
+# Install PHP extensions using docker-php-ext-install
+RUN docker-php-ext-install bcmath curl intl mbstring mysqli pdo_mysql zip
+
+# Install GD extension with specific configuration
+RUN apt-get install -y libpng-dev libjpeg-dev libfreetype6-dev \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install gd
+
+# Install APCu using PECL
+RUN apt-get install -y gcc make autoconf libc-dev pkg-config \
+    && pecl install apcu \
+    && docker-php-ext-enable apcu
 
 # Download and install XDMoD
 RUN wget https://github.com/ubccr/xdmod/releases/download/v10.5.0-1.0/xdmod-10.5.0-el8.tar.gz \
@@ -34,7 +59,7 @@ WORKDIR /opt/xdmod/bin
 # Expose port 80
 EXPOSE 80
 
-# Automate the XDMoD setup using expect
+# Copy the Expect script for automating XDMoD setup
 COPY setup-xdmod.expect /usr/local/bin/setup-xdmod.expect
 RUN chmod +x /usr/local/bin/setup-xdmod.expect
 

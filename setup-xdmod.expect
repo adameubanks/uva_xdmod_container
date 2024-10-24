@@ -1,40 +1,97 @@
 #!/usr/bin/expect
 
+# Set timeout for MySQL readiness check
+set timeout 10
+
+# Access environment variables using the env array
+# These should be set in your shell or Docker environment
+set db_name "xdmod_db"
+set db_user "xdmod_user"
+set db_pass "xdmod_pass"
+set db_admin_user "root"
+set db_admin_pass "password"
+
+set site_address "https://localhost/"
+set email_address "ucn5xj@virginia.edu"
+set chromium_path "/usr/lib64/chromium-browser/headless_shell"
+
 # Wait for MySQL to be ready
-set timeout 30
-spawn bash -c "until mysql -h xdmod_db -u root -ppassword -e 'SELECT 1'; do {puts \"Waiting for MySQL...\"; sleep 3;}"
+spawn bash -c "until mysql -h xdmod_db -u $db_admin_user -p$db_admin_pass -e 'SELECT 1'; do {puts \"Waiting for MySQL...\"; sleep 3;}"
 wait
 
 # Start the XDMoD setup
 spawn xdmod-setup
 
-# Interact with the setup
+# Interact with the setup using the environment variables
+expect "Do you want to continue (yes, no)?"
+send "yes\r"
+
+# Database Settings
 expect "Select an option (1, 2, 3, 4, 5, 6, 7, 8, q):"
 send "2\r"
 
 expect "DB Name:"
-send "xdmod_db\r"
+send "$db_name\r"
 
 expect "DB Port:"
 send "3306\r"
 
 expect "DB Username:"
-send "xdmod_user\r"
+send "$db_user\r"
 
 expect "DB Password:"
-send "xdmod_pass\r"
+send "$db_pass\r"
 
 expect "confirm) DB Password:"
-send "xdmod_pass\r"
+send "$db_pass\r"
 
 expect "DB Admin Username:"
-send "root\r"
+send "$db_admin_user\r"
 
 expect "DB Admin Password:"
-send "password\r"
+send "$db_admin_pass\r"
 
 expect "confirm) DB Admin Password:"
-send "password\r"
+send "$db_admin_pass\r"
+
+# Loop to handle repeated prompts for dropping and recreating the database
+for {set i 0} {$i < 7} {incr i} {
+    expect {
+        "Drop and recreate database (yes, no)?" {
+            send "no\r"
+        }
+    }
+}
+
+send "\r"
+
+# General Settings
+expect "Select an option (1, 2, 3, 4, 5, 6, 7, 8, q):"
+send "1\r"
+
+expect "Site Address:"
+send "$site_address\r"
+
+expect "DB Port:"
+send "3306\r"
+
+expect "Email Address:"
+send "$email_address\r"
+
+expect "Chromium Path:"
+send "$chromium_path\r"
+
+expect "Center Logo Path:"
+send "\r"
+
+expect "Enable Dashboard Tab"
+send "on\r"
+
+expect "Overwrite config file '/opt/xdmod/etc/portal_settings.ini'"
+send "yes\r"
+
+expect "Press ENTER to continue."
+send "\r"
 
 # Wait for the setup to finish
 expect eof

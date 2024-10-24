@@ -1,5 +1,5 @@
 services:
-  xdmod:
+  xdmod_service:
     build: .
     ports:
       - '8080:80'
@@ -9,7 +9,7 @@ services:
   xdmod_db:
     image: mysql:5.7
     environment:
-      MYSQL_ROOT_PASSWORD: password
-      MYSQL_DATABASE: xdmod_db
-      MYSQL_USER: xdmod_user
-      MYSQL_PASSWORD: xdmod_pass
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}

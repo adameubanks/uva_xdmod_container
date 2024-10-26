@@ -63,5 +63,9 @@ EXPOSE 80
 COPY setup-xdmod.expect /usr/local/bin/setup-xdmod.expect
 RUN chmod +x /usr/local/bin/setup-xdmod.expect
 
+COPY .env .env
+RUN . .env && setup-xdmod.expect
+
+
 # Run the Apache server and XDMoD setup
 CMD ["bash", "-c", "/usr/local/bin/setup-xdmod.expect && apache2-foreground"]

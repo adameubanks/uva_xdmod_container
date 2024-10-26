@@ -1,23 +1,29 @@
 #!/usr/bin/expect
 
-# Set timeout for MySQL readiness check
-set timeout 10
+# Set timeout for expect commands
+set timeout 30
 
-# Access environment variables using the env array
-# These should be set in your shell or Docker environment
-set db_name "xdmod_db"
-set db_user "xdmod_user"
-set db_pass "xdmod_pass"
-set db_admin_user "root"
-set db_admin_pass "password"
+# Read .env file
+set env_file ".env"
+if {[file exists $env_file]} {
+    set f [open $env_file r]
+    while {[gets $f line] != -1} {
+        if {[regexp {^\s*([^#][^=]+)=(.+)$} $line -> key value]} {
+            set env($key) $value
+        }
+    }
+    close $f
+}
 
-set site_address "https://localhost/"
-set email_address "ucn5xj@virginia.edu"
-set chromium_path "/usr/lib64/chromium-browser/headless_shell"
-
-# Wait for MySQL to be ready
-spawn bash -c "until mysql -h xdmod_db -u $db_admin_user -p$db_admin_pass -e 'SELECT 1'; do {puts \"Waiting for MySQL...\"; sleep 3;}"
-wait
+# Access environment variables
+set db_name $env(DB_NAME)
+set db_user $env(DB_USER)
+set db_pass $env(DB_PASS)
+set db_admin_user $env(DB_ADMIN_USER)
+set db_admin_pass $env(DB_ADMIN_PASS)
+set site_address $env(SITE_ADDRESS)
+set email_address $env(EMAIL_ADDRESS)
+set chromium_path $env(CHROMIUM_PATH)
 
 # Start the XDMoD setup
 spawn xdmod-setup
@@ -54,16 +60,29 @@ send "$db_admin_pass\r"
 expect "confirm) DB Admin Password:"
 send "$db_admin_pass\r"
 
-# Loop to handle repeated prompts for dropping and recreating the database
-for {set i 0} {$i < 7} {incr i} {
+# Handle multiple "Drop and recreate database" prompts and other prompts
+while {1} {
     expect {
         "Drop and recreate database (yes, no)?" {
             send "no\r"
+            exp_continue
+        }
+        "Overwrite config file '/opt/xdmod/etc/portal_settings.ini' (yes, no)?" {
+            send "yes\r"
+            exp_continue
+        }
+        "Press ENTER to continue." {
+            send "\r"
+            exp_continue
+        }
+        -re "\n\r+" {
+            exp_continue
+        }
+        "Select an option (1, 2, 3, 4, 5, 6, 7, 8, q):" {
+            break
         }
     }
 }
-
-send "\r"
 
 # General Settings
 expect "Select an option (1, 2, 3, 4, 5, 6, 7, 8, q):"
@@ -71,9 +90,6 @@ send "1\r"
 
 expect "Site Address:"
 send "$site_address\r"
-
-expect "DB Port:"
-send "3306\r"
 
 expect "Email Address:"
 send "$email_address\r"
@@ -92,6 +108,12 @@ send "yes\r"
 
 expect "Press ENTER to continue."
 send "\r"
+
+# Return to main menu
+expect "Select an option (1, 2, 3, 4, 5, 6, 7, 8, q):"
+
+# Exit the setup
+send "q\r"
 
 # Wait for the setup to finish
 expect eof

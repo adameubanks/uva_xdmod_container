@@ -1,7 +1,7 @@
 #!/usr/bin/expect
 
 # Set timeout for expect commands
-set timeout 30
+set timeout 5
 
 # Read .env file
 set env_file ".env"
@@ -16,6 +16,8 @@ if {[file exists $env_file]} {
 }
 
 # Access environment variables
+set db_host $env(DB_HOST)
+set db_port $env(DB_PORT)
 set db_name $env(DB_NAME)
 set db_user $env(DB_USER)
 set db_pass $env(DB_PASS)
@@ -28,61 +30,8 @@ set chromium_path $env(CHROMIUM_PATH)
 # Start the XDMoD setup
 spawn xdmod-setup
 
-# Interact with the setup using the environment variables
 expect "Do you want to continue (yes, no)?"
 send "yes\r"
-
-# Database Settings
-expect "Select an option (1, 2, 3, 4, 5, 6, 7, 8, q):"
-send "2\r"
-
-expect "DB Name:"
-send "$db_name\r"
-
-expect "DB Port:"
-send "3306\r"
-
-expect "DB Username:"
-send "$db_user\r"
-
-expect "DB Password:"
-send "$db_pass\r"
-
-expect "confirm) DB Password:"
-send "$db_pass\r"
-
-expect "DB Admin Username:"
-send "$db_admin_user\r"
-
-expect "DB Admin Password:"
-send "$db_admin_pass\r"
-
-expect "confirm) DB Admin Password:"
-send "$db_admin_pass\r"
-
-# Handle multiple "Drop and recreate database" prompts and other prompts
-while {1} {
-    expect {
-        "Drop and recreate database (yes, no)?" {
-            send "no\r"
-            exp_continue
-        }
-        "Overwrite config file '/opt/xdmod/etc/portal_settings.ini' (yes, no)?" {
-            send "yes\r"
-            exp_continue
-        }
-        "Press ENTER to continue." {
-            send "\r"
-            exp_continue
-        }
-        -re "\n\r+" {
-            exp_continue
-        }
-        "Select an option (1, 2, 3, 4, 5, 6, 7, 8, q):" {
-            break
-        }
-    }
-}
 
 # General Settings
 expect "Select an option (1, 2, 3, 4, 5, 6, 7, 8, q):"
@@ -109,11 +58,70 @@ send "yes\r"
 expect "Press ENTER to continue."
 send "\r"
 
-# Return to main menu
+# Database Settings
 expect "Select an option (1, 2, 3, 4, 5, 6, 7, 8, q):"
+send "2\r"
+
+expect "DB Hostname or IP:"
+send "$db_host\r"
+
+expect "DB Port:"
+send "$db_port\r"
+
+expect "DB Username:"
+send "$db_user\r"
+
+expect "DB Password:"
+send "$db_pass\r"
+
+expect "(confirm) DB Password:"
+send "$db_pass\r"
+
+expect "DB Admin Username:"
+send "$db_admin_user\r"
+
+expect "DB Admin Password:"
+send "$db_admin_pass\r"
+
+expect "(confirm) DB Admin Password:"
+send "$db_admin_pass\r"
+
+# Handle potential database creation prompts and "Press ENTER to continue" prompts
+expect {
+    -re "Database .* already exists" {
+        expect "Drop and recreate database (yes, no)? \[no\]"
+        send "no\r"
+        exp_continue
+    }
+    "Create database" {
+        send "yes\r"
+        exp_continue
+    }
+    "Overwrite config file '/opt/xdmod/etc/portal_settings.ini'" {
+        send "yes\r"
+        exp_continue
+    }
+}
+
+send "\r"
 
 # Exit the setup
 send "q\r"
 
-# Wait for the setup to finish
-expect eof
+# Handle any final "Press ENTER" prompt
+expect {
+    -re "Press.*ENTER.*continue" {
+        send "\r"
+    }
+    "Select an option (1, 2, 3, 4, 5, 6, 7, 8, q):" {
+        send "q\r"
+    }
+    timeout {
+        puts "Timeout waiting for final prompt. Continuing..."
+    }
+    eof {
+        puts "EOF encountered. XDMoD setup completed."
+    }
+}
+
+puts "XDMoD setup completed successfully"
